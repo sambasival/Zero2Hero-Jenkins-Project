@@ -1,0 +1,68 @@
+[jenkins@ip-172-31-10-36 jenkins-data]$ pwd
+/home/jenkins/jenkins-data
+[jenkins@ip-172-31-10-36 jenkins-data]$ ls
+centos8  db_data  docker-compose.yml  jenkins_home
+[jenkins@ip-172-31-10-36 jenkins-data]$
+=================================================
+
+version: '3'
+services:
+  jenkins:
+    container_name: jenkins
+    image: jenkins/jenkins
+    ports:
+      - "8080:8080"
+    volumes:
+      - "$PWD/jenkins_home:/var/jenkins/jenkins_home"
+    networks:
+      - net
+  remote-host:
+    container_name: remote-host
+    image: remote-host
+    build:
+      context: centos8
+    networks:
+      - net
+  db_host:
+    container_name: db
+    image: mysql:5.7
+    environment:
+      - "MYSQL_ROOT_PASSWORD=1234"
+    volumes:
+      - "$PWD/db_data:/var/lib/mysql"
+    networks:
+      - net
+networks:
+  net:
+=================================
+
+Dockerfile
+----------
+[jenkins@ip-172-31-10-36 centos8]$ pwd
+/home/jenkins/jenkins-data/centos8
+[jenkins@ip-172-31-10-36 centos8]$ ls
+Dockerfile  remote-key  remote-key.pub
+[jenkins@ip-172-31-10-36 centos8]$ cat Dockerfile
+FROM centos:7
+
+RUN yum -y install openssh-server
+
+RUN useradd remote_user && \
+    echo "remote_user:1234" | chpasswd && \
+    mkdir /home/remote_user/.ssh && \
+    chmod 700 /home/remote_user/.ssh
+
+COPY remote-key.pub /home/remote_user/.ssh/authorized_keys
+
+RUN chown remote_user:remote_user -R /home/remote_user/.ssh/ && chmod 600 /home/remote_user/.ssh/authorized_keys
+
+RUN yum install -y initscripts && /usr/sbin/sshd-keygen
+
+RUN yum -y install mysql
+
+#RUN curl -O https://bootstrap.pypa.io/get-pip.py && python get-pip.py && pip install awscli --upgrade
+RUN curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py && python get-pip.py && pip install awscli --upgrade
+
+
+CMD /usr/sbin/sshd -D
+
