@@ -1,0 +1,12 @@
+#/bin/bash
+
+DATE=$(date +%H-%M-%S)
+DB_HOST=$1
+DB_PASSWORD=$2
+DB_NAME=$3
+
+mysqldump -u root -h $DB_HOST -p$DB_PASSWORD $DB_NAME > /tmp/db_auto_dump_$DATE.sql && \
+export AWS_ACCESS_KEY_ID=AKIAYTQHRXOWWX4QWBW7 && \
+export AWS_SECRET_ACCESS_KEY=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
+echo "uploading data to S3 " && \
+aws s3 cp /tmp/db_auto_dump_$DATE.sql s3://jenkins-mysql-backup-2021aug-shiva/
